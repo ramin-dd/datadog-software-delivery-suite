@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react'
+import '@testing-library/jest-dom'
 import HomePage from '@/app/page'
 
 // Mock the UI components to avoid dependency issues during testing
@@ -64,7 +65,9 @@ describe('HomePage', () => {
     expect(screen.getByText('CI Builds')).toBeInTheDocument()
     expect(screen.getByText('Test Results')).toBeInTheDocument()
     expect(screen.getByText('Deployments')).toBeInTheDocument()
-    expect(screen.getByText('Quality Gates')).toBeInTheDocument()
+    // Use getAllByText for duplicate text elements
+    const qualityGatesElements = screen.getAllByText('Quality Gates')
+    expect(qualityGatesElements.length).toBeGreaterThan(0)
   })
 
   it('shows recent build information', () => {
