@@ -1,0 +1,95 @@
+name: CI Pipeline with Datadog
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  DD_ENV: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+  DD_SERVICE: datadog-suite
+  DD_VERSION: ${{ github.sha }}
+  DD_SITE: datadoghq.com
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Type check
+      run: npm run type-check
+
+    - name: Lint
+      run: npm run lint
+
+    - name: Run tests with Datadog instrumentation
+      run: |
+        npm install -g @datadog/datadog-ci
+        npm run test:datadog
+      env:
+        DD_API_KEY: ${{ secrets.DD_API_KEY }}
+        DD_APP_KEY: ${{ secrets.DD_APP_KEY }}
+
+    - name: Run E2E tests
+      run: npm run test:e2e
+      env:
+        DD_API_KEY: ${{ secrets.DD_API_KEY }}
+
+    - name: Build application
+      run: npm run build
+
+    - name: Enforce Datadog quality gate
+      if: github.event_name == 'pull_request'
+      run: npx datadog-ci gate test --fail-on-flaky
+      env:
+        DD_API_KEY: ${{ secrets.DD_API_KEY }}
+        DD_APP_KEY: ${{ secrets.DD_APP_KEY }}
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Build application
+      run: npm run build
+
+    - name: Deploy to staging
+      run: |
+        echo "Deploying to staging environment..."
+        # Add your actual deployment commands here
+
+    - name: Notify Datadog of deployment
+      run: |
+        npx datadog-ci deploy notify \
+          --env=${{ env.DD_ENV }} \
+          --service=${{ env.DD_SERVICE }} \
+          --version=${{ env.DD_VERSION }} \
+          --tags="team:engineering,project:datadog-suite"
+      env:
+        DD_API_KEY: ${{ secrets.DD_API_KEY }} 
