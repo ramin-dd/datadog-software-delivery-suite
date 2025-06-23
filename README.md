@@ -228,4 +228,6 @@ For questions and support:
 
 - 📖 Check the [documentation](docs/)
 - 🐛 [Open an issue](../../issues)
-- 💬 [Discussions](../../discussions) 
+- 💬 [Discussions](../../discussions) # Testing CI Pipeline
+
+This commit will trigger our GitHub Actions workflow with Datadog integration.
